@@ -7,7 +7,7 @@ export async function GET() {
   try {
     await connectDB();
 
-    const Products = await products.find();
+    const Products = await products.find().sort({ createdAt: -1 });
 
     return NextResponse.json({ Products }, { status: 200 });
   } catch (error) {
@@ -29,6 +29,7 @@ export async function POST(request) {
       productDescription: formData.get("productDescription"),
       productPrize: formData.get("productPrize"),
       productImage: formData.get("productImage"),
+      tags: JSON.parse(formData.get("tags") || "[]"),
     };
 
     console.log(data);
@@ -104,6 +105,7 @@ export async function PATCH(request) {
       productName: formData.get("productName"),
       productDescription: formData.get("productDescription"),
       productPrize: formData.get("productPrize"),
+      tags: JSON.parse(formData.get("tags") || "[]"),
     };
 
     const file = formData.get("productImage");

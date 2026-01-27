@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+// import Image from "next/image";
 import { useState, useEffect } from "react";
 import ProductSkeleton from "@/components/productskeleton";
 
@@ -19,6 +19,10 @@ export default function Products() {
   const [loading, setLoading] = useState(false);
   const [productAdded, setProductAdded] = useState(false);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [tags, setTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -32,6 +36,44 @@ export default function Products() {
     setProductAdded(false);
   }, [productAdded]);
 
+  // const filteredProducts = products.filter((product) => {
+  //   const search = searchTerm.toLowerCase().replace(/\s+/g, "");
+
+  //   const name = product.productName.toLowerCase().replace(/\s+/g, "");
+
+  //   const description = product.productDescription
+  //     .toLowerCase()
+  //     .replace(/\s+/g, "");
+
+  //   const tagsMatch = product.tags?.some((tag) =>
+  //     tag.name.toLowerCase().replace(/\s+/g, "").includes(search),
+  //   );
+
+  //   return name.includes(search) || description.includes(search) || tagsMatch;
+  // });
+
+  const filteredProducts = products.filter((product) => {
+    const search = searchTerm.toLowerCase().replace(/\s+/g, "");
+
+    const name = (product.productName || "").toLowerCase().replace(/\s+/g, "");
+
+    const description = (product.productDescription || "")
+      .toLowerCase()
+      .replace(/\s+/g, "");
+
+    const tagsMatch = Array.isArray(product.tags)
+      ? product.tags.some(
+          (tag) =>
+            typeof tag === "object" &&
+            typeof tag.name === "string" &&
+            tag.name.toLowerCase().replace(/\s+/g, "").includes(search),
+        )
+      : false;
+
+    return name.includes(search) || description.includes(search) || tagsMatch;
+  });
+
+
   return (
     <div className="bg-zinc-50 font-sans min-h-screen p-10 pt-24 pb-24 space-y-16">
       {" "}
@@ -41,6 +83,15 @@ export default function Products() {
           All Products
         </h1>
       </div>
+      <div className="flex justify-center">
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-md px-4 py-2 border border-gray-300 shadow-sm rounded-full focus:outline-none focus:ring-2 focus:ring-black text-black "
+        />
+      </div>
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -49,7 +100,7 @@ export default function Products() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products?.map((product) => (
+          {filteredProducts.map((product) => (
             <div
               key={product._id}
               className="group bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"

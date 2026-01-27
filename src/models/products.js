@@ -8,6 +8,12 @@ const ProductsSchema = new mongoose.Schema({
     url: { type: String, required: true },
     public_id: { type: String, required: true },
   },
+  tags: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "productTags",
+    },
+  ],
 });
 
 export default mongoose.models.Products ||

@@ -5,47 +5,46 @@ import { useRouter } from "next/navigation";
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
+
   return (
-    <>
-      {/* ================= Admin Header ================= */}
-      <div className="fixed top-0 left-0 w-full h-16 bg-gradient-to-r from-pink-400 to-white-200 text-black z-50 shadow-md flex items-center justify-between px-6">
-        <header className="text-xl font-bold tracking-wide">Admin Panel</header>
-        <LogoutButton />
-      </div>
+    <div className="min-h-screen bg-gray-100">
+      {/* ================= SIDEBAR ================= */}
+      <aside className="fixed top-0 left-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="h-16 flex items-center px-6 font-semibold text-gray-800 border-b border-gray-200">
+          Admin Panel
+        </div>
 
-      {/* ================= Admin Sidebar ================= */}
-      <div className="fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white border-r shadow-sm z-40">
-        <nav className="p-4 space-y-2 text-black">
-          <h2 className="text-sm font-semibold text-gray-500 mb-4">
-            ADMIN MENU
-          </h2>
-
+        {/* Sidebar Menu */}
+        <div className="flex-1 p-4 space-y-2 text-gray-800 overflow-y-auto">
           <button
-            className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 font-medium"
+            className="w-full text-left px-4 py-2 rounded-md hover:bg-gray-100 font-medium"
             onClick={() => router.push("/admin/dashboard")}
           >
             Dashboard
           </button>
 
           <button
-            className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 font-medium"
+            className="w-full text-left px-4 py-2 rounded-md hover:bg-gray-100 font-medium"
             onClick={() => router.push("/admin/manage_products")}
           >
             Manage Products
           </button>
+        </div>
+      </aside>
 
-          {/* <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 font-medium">
-            Orders
-          </button>
+      {/* ================= MAIN AREA ================= */}
+      <div className="ml-64 flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-end px-6 z-10">
+          <LogoutButton />
+        </header>
 
-          <button className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 font-medium">
-            Users
-          </button> */}
-        </nav>
+        {/* Content */}
+        <main className="mt-16 p-6 overflow-y-auto bg-zinc-50 h-[calc(100vh-4rem)]">
+          {children}
+        </main>
       </div>
-
-      {/* ================= Admin Content ================= */}
-      <main className="ml-64 pt-16 min-h-screen bg-zinc-50">{children}</main>
-    </>
+    </div>
   );
 }

@@ -17,17 +17,21 @@ export default function Products() {
   const [productAdded, setProductAdded] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [editingProductId, setEditingProductId] = useState(null);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  const [tags, setTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
 
   /* ================= Add / Edit Product ================= */
 
   const handleAddProduct = async () => {
     try {
-      /* ===== NEW CODE (EDIT MODE WITH IMAGE SUPPORT) ===== */
+      /* ===== EDIT Form Code ===== */
       if (editingProductId) {
         const formData = new FormData();
         formData.append("productName", productName);
         formData.append("productDescription", productDescription);
         formData.append("productPrize", productPrize);
+        formData.append("tags", JSON.stringify(selectedTags));
 
         if (productImage) {
           formData.append("productImage", productImage);
@@ -53,21 +57,27 @@ export default function Products() {
           setProductPrize("");
           setProductImage("");
           setEditingProductId(null);
+          setSelectedTags([]);
 
-          return; // stop ADD flow
+          return;
         } else {
           alert("Update failed");
           return;
         }
       }
-      /* ===== END NEW CODE ===== */
 
-      // ===== EXISTING ADD PRODUCT LOGIC (UNCHANGED) =====
+      // ============================== ADD PRODUCT LOGIC =============================
 
       const formData = new FormData();
       formData.append("productName", productName);
       formData.append("productDescription", productDescription);
       formData.append("productPrize", productPrize);
+      formData.append("tags", JSON.stringify(selectedTags));
+
+      if (!productName || !productDescription || !productPrize) {
+        alert("All fields are required");
+        return;
+      }
 
       if (!productImage) {
         alert("Product Image Required");
@@ -89,6 +99,7 @@ export default function Products() {
         setProductPrize("");
         setProductImage("");
         setProductAdded(true);
+        setSelectedTags([]);
       } else {
         alert(data.message);
       }
@@ -134,6 +145,8 @@ export default function Products() {
       setLoading(true);
       const response = await fetch("/api/products");
       const data = await response.json();
+      console.log("TAGS FROM API:", data);
+
       setProducts(data.Products);
       setLoading(false);
     };
@@ -142,63 +155,137 @@ export default function Products() {
     setProductAdded(false);
   }, [productAdded]);
 
+  /* ================= Fetch tags ================= */
+
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        setTagsLoading(true);
+        const response = await fetch("/api/productTags");
+        const data = await response.json();
+        setTags(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setTagsLoading(false);
+      }
+    };
+
+    loadTags();
+  }, []);
+
+  /* ================= Scroll Behaviour ================= */
+
+  useEffect(() => {
+    if (editingProductId) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [editingProductId]);
+
   return (
     <div className="bg-zinc-50 font-sans min-h-screen p-10 pt-5 pb-24 space-y-16">
       {/* ================= Add / Edit Product ================= */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h1 className="font-bold text-3xl text-black mb-6">
+      <div className="bg-white p-10 rounded-2xl shadow-lg">
+        <h1 id="edit-form" className="font-bold text-4xl text-black mb-8">
           {editingProductId ? "Edit Product" : "Add Product"}
         </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end text-black">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-black">
+          {/* Product Name */}
           <div>
-            <label className="block text-sm mb-1">Product Name</label>
+            <label className="block text-sm font-medium mb-2">
+              Product Name
+            </label>
             <input
               type="text"
               value={productName}
               onChange={(e) => setProductName(e.target.value)}
-              className="border border-gray-300 rounded w-full p-2"
+              className="w-full border border-gray-300 p-3 text-base focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
 
+          {/* Product Price */}
           <div>
-            <label className="block text-sm mb-1">Description</label>
-            <input
-              type="text"
-              value={productDescription}
-              onChange={(e) => setProductDescription(e.target.value)}
-              className="border border-gray-300 rounded w-full p-2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">Product Price</label>
+            <label className="block text-sm font-medium mb-2">
+              Product Price
+            </label>
             <input
               type="text"
               value={productPrize}
               onChange={(e) => setProductPrize(e.target.value)}
-              className="border border-gray-300 rounded w-full p-2"
+              className="w-full border border-gray-300 p-3 text-base focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
 
+          {/* Description (BIG) */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">
+              Description
+            </label>
+            <textarea
+              rows={5}
+              value={productDescription}
+              onChange={(e) => setProductDescription(e.target.value)}
+              placeholder="Enter product description....."
+              className="w-full border border-gray-300 p-3 text-base resize-none focus:outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+          {/* Selected Tags Input Box */}
           <div>
-            <label className="block text-sm mb-1">
+            <label className="block text-sm font-medium mb-2">
+              Selected Tags
+            </label>
+
+            <div className="min-h-[56px] w-full border border-gray-300 p-3 flex flex-wrap gap-2 bg-white">
+              {selectedTags.length === 0 ? (
+                <span className="text-gray-400 text-sm">No tags selected</span>
+              ) : (
+                tags
+                  .filter((tag) => selectedTags.includes(tag._id))
+                  .map((tag) => (
+                    <span
+                      key={tag._id}
+                      className="flex items-center gap-2 bg-black text-white px-3 py-1 text-sm"
+                    >
+                      {tag.name}
+                      <button
+                        onClick={() =>
+                          setSelectedTags((prev) =>
+                            prev.filter((id) => id !== tag._id),
+                          )
+                        }
+                        className="text-xs"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))
+              )}
+            </div>
+          </div>
+
+          {/* Product Image */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
               Product Image {editingProductId && "(optional)"}
             </label>
             <input
               type="file"
               accept="image/*"
               onChange={(e) => setProductImage(e.target.files[0])}
-              className="border border-gray-300 rounded w-full p-2"
+              className="w-full border border-gray-300 p-3 bg-white"
             />
           </div>
 
-          <button
-            onClick={handleAddProduct}
-            className="border border-gray-300 rounded w-full p-2 hover:bg-gray-100 transition"
-          >
-            {editingProductId ? "Update Product" : "Add Product"}
-          </button>
+          {/* Submit Button */}
+          <div className="flex items-end">
+            <button
+              onClick={handleAddProduct}
+              className="w-full bg-black text-white py-3 text-base font-medium hover:bg-gray-900 transition"
+            >
+              {editingProductId ? "Update Product" : "Add Product"}
+            </button>
+          </div>
         </div>
 
         {/* ===== NEW CODE (Cancel Edit) ===== */}
@@ -217,6 +304,58 @@ export default function Products() {
           </button>
         )}
         {/* ===== END NEW CODE ===== */}
+      </div>
+
+      {/* ================= Tags & Flags ================= */}
+      <div className="bg-[#fdebe] rounded-2xl p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          Select Tags for the product while adding
+        </h2>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-3">
+          {tagsLoading ? (
+            <span className="text-sm text-gray-500">Loading tags...</span>
+          ) : (
+            tags.map((tag) => {
+              const isSelected = selectedTags.includes(tag._id);
+
+              return (
+                <button
+                  key={tag._id}
+                  onClick={() =>
+                    setSelectedTags((prev) =>
+                      prev.includes(tag._id)
+                        ? prev.filter((id) => id !== tag._id)
+                        : [...prev, tag._id],
+                    )
+                  }
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition
+              ${
+                isSelected
+                  ? "bg-[#4a2c23] text-white border-[#4a2c23]"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+              }`}
+                >
+                  {tag.name}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Flags (static UI only for now) */}
+        <div className="flex flex-wrap gap-4 mt-6">
+          {[].map((flag) => (
+            <label
+              key={flag}
+              className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border cursor-pointer"
+            >
+              <input type="checkbox" className="accent-[#4a2c23]" />
+              <span className="text-sm font-medium">{flag}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* ================= All Products ================= */}
@@ -267,7 +406,11 @@ export default function Products() {
                         setProductDescription(product.productDescription);
                         setProductPrize(product.productPrize);
                         setProductImage(null);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        setSelectedTags(product.tags || []);
+                        // window.scrollTo({ top: 0, behavior: "smooth" });
+                        document.getElementById("edit-form").scrollIntoView({
+                          behavior: "smooth",
+                        });
                       }}
                       className="px-3 py-1 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition"
                     >
