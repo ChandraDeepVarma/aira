@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Normal dots */
+.swiper-pagination-bullet {
+  background-color: #ffffff; /* inactive dot */
+  opacity: 0.6;
+}
+
+/* Active dot */
+.swiper-pagination-bullet-active {
+  background-color: #000000; /* active dot */
+  opacity: 1;
+}

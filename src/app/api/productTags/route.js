@@ -17,3 +17,22 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(req) {
+  try {
+    await connectDB();
+    const { name } = await req.json();
+
+    const normalized = name.trim().toLowerCase();
+
+    let tag = await productTags.findOne({ name: normalized });
+
+    if (!tag) {
+      tag = await productTags.create({ name: normalized });
+    }
+
+    return NextResponse.json(tag);
+  } catch (err) {
+    return NextResponse.json({ error: "Tag create failed" }, { status: 500 });
+  }
+}

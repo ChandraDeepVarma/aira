@@ -1,5 +1,4 @@
 "use client";
-
 import LogoutButton from "@/components/Adminlogout";
 import { useRouter } from "next/navigation";
 

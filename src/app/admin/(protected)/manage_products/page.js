@@ -3,6 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductSkeleton from "@/components/productskeleton";
+import Swal from "sweetalert2";
+import {
+  confirmAction,
+  successAlert,
+  errorAlert,
+  loadingAlert,
+} from "@/lib/alerts";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Pagination } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/pagination";
 
 export default function Products() {
   const router = useRouter();
@@ -10,7 +22,7 @@ export default function Products() {
   const [productName, setProductName] = useState("");
   const [productDescription, setProductDescription] = useState("");
   const [productPrize, setProductPrize] = useState("");
-  const [productImage, setProductImage] = useState("");
+  const [productImage, setProductImage] = useState([]);
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,122 +32,117 @@ export default function Products() {
   const [tagsLoading, setTagsLoading] = useState(false);
   const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [tagInput, setTagInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   /* ================= Add / Edit Product ================= */
 
   const handleAddProduct = async () => {
+    if (!productName || !productDescription || !productPrize) {
+      return errorAlert("All fields are required");
+    }
+
+    if (!editingProductId && productImage.length === 0) {
+      return errorAlert("At least one product image is required");
+    }
+
+    loadingAlert(
+      editingProductId ? "Updating product..." : "Adding product...",
+    );
+
     try {
-      /* ===== EDIT Form Code ===== */
-      if (editingProductId) {
-        const formData = new FormData();
-        formData.append("productName", productName);
-        formData.append("productDescription", productDescription);
-        formData.append("productPrize", productPrize);
-        formData.append("tags", JSON.stringify(selectedTags));
-
-        if (productImage) {
-          formData.append("productImage", productImage);
-        }
-
-        const response = await fetch(`/api/products?id=${editingProductId}`, {
-          method: "PATCH",
-          body: formData,
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setProducts((prev) =>
-            prev.map((product) =>
-              product._id === data.product._id ? data.product : product,
-            ),
-          );
-
-          // Reset form
-          setProductName("");
-          setProductDescription("");
-          setProductPrize("");
-          setProductImage("");
-          setEditingProductId(null);
-          setSelectedTags([]);
-
-          return;
-        } else {
-          alert("Update failed");
-          return;
-        }
-      }
-
-      // ============================== ADD PRODUCT LOGIC =============================
-
       const formData = new FormData();
       formData.append("productName", productName);
       formData.append("productDescription", productDescription);
       formData.append("productPrize", productPrize);
       formData.append("tags", JSON.stringify(selectedTags));
 
-      if (!productName || !productDescription || !productPrize) {
-        alert("All fields are required");
-        return;
+      if (productImage) {
+        productImage.forEach((image) => {
+          formData.append("productImages", image);
+        });
       }
 
-      if (!productImage) {
-        alert("Product Image Required");
-        return;
-      }
+      const res = await fetch(
+        editingProductId
+          ? `/api/products?id=${editingProductId}`
+          : "/api/products",
+        {
+          method: editingProductId ? "PATCH" : "POST",
+          body: formData,
+        },
+      );
 
-      formData.append("productImage", productImage);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Operation failed");
 
-      const response = await fetch("/api/products", {
-        method: "POST",
-        body: formData,
-      });
+      Swal.close();
+      successAlert(
+        editingProductId
+          ? "Product updated successfully"
+          : "Product added successfully",
+      );
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setProductName("");
-        setProductDescription("");
-        setProductPrize("");
-        setProductImage("");
-        setProductAdded(true);
-        setSelectedTags([]);
-      } else {
-        alert(data.message);
-      }
-    } catch (error) {
-      console.log(error);
+      setProductAdded(true);
+      setEditingProductId(null);
+      setSelectedTags([]);
+      setProductName("");
+      setProductDescription("");
+      setProductPrize("");
+      setProductImage([]);
+    } catch (err) {
+      Swal.close();
+      errorAlert(err.message);
     }
   };
 
   /* ================= Delete Product ================= */
 
   const handleDeleteProduct = async (productId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this product?",
-    );
+    const result = await confirmAction({
+      title: "Delete this product?",
+      text: "This action cannot be undone",
+      confirmText: "Delete",
+    });
 
-    if (!confirmed) return;
+    if (!result.isConfirmed) return;
+
+    loadingAlert("Deleting product...");
 
     try {
-      setDeletingId(productId);
-
-      const response = await fetch(`/api/products?id=${productId}`, {
+      const res = await fetch(`/api/products?id=${productId}`, {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        throw new Error("Delete failed");
-      }
+      if (!res.ok) throw new Error("Delete failed");
+
+      Swal.close();
+      successAlert("Product deleted successfully");
 
       setProducts((prev) =>
         prev.filter((product) => product._id !== productId),
       );
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setDeletingId(null);
+    } catch (err) {
+      Swal.close();
+      errorAlert(err.message);
     }
+  };
+
+  const handleCancelEdit = async () => {
+    const result = await confirmAction({
+      title: "Cancel editing?",
+      text: "Unsaved changes will be lost",
+      confirmText: "Yes, cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setEditingProductId(null);
+    setProductName("");
+    setProductDescription("");
+    setProductPrize("");
+    setProductImage([]);
+    setSelectedTags([]);
   };
 
   /* ================= Fetch Products ================= */
@@ -174,6 +181,30 @@ export default function Products() {
     loadTags();
   }, []);
 
+  // =========================filter logic========================
+
+  const filteredProducts = products.filter((product) => {
+    const search = searchTerm.toLowerCase().replace(/\s+/g, "");
+
+    const name = (product.productName || "").toLowerCase().replace(/\s+/g, "");
+
+    const description = (product.productDescription || "")
+      .toLowerCase()
+      .replace(/\s+/g, "");
+
+    const tagsMatch = Array.isArray(product.tags)
+      ? product.tags.some(
+          (tag) =>
+            tag &&
+            typeof tag === "object" &&
+            typeof tag.name === "string" &&
+            tag.name.toLowerCase().replace(/\s+/g, "").includes(search),
+        )
+      : false;
+
+    return name.includes(search) || description.includes(search) || tagsMatch;
+  });
+
   /* ================= Scroll Behaviour ================= */
 
   useEffect(() => {
@@ -181,6 +212,43 @@ export default function Products() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [editingProductId]);
+
+  /* ================= Tag Input ================= */
+
+  const handleTagKeyDown = async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+
+    const value = tagInput.trim();
+    if (!value) return;
+
+    // Check if already exists in fetched tags
+    const existing = tags.find(
+      (t) => t.name.toLowerCase() === value.toLowerCase(),
+    );
+
+    let tagId;
+
+    if (existing) {
+      tagId = existing._id;
+    } else {
+      // Create tag in DB
+      const res = await fetch("/api/productTags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: value }),
+      });
+
+      const newTag = await res.json();
+      setTags((prev) => [...prev, newTag]);
+      tagId = newTag._id;
+    }
+
+    // Add to selectedTags
+    setSelectedTags((prev) => (prev.includes(tagId) ? prev : [...prev, tagId]));
+
+    setTagInput("");
+  };
 
   return (
     <div className="bg-zinc-50 font-sans min-h-screen p-10 pt-5 pb-24 space-y-16">
@@ -233,10 +301,19 @@ export default function Products() {
           {/* Selected Tags Input Box */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Selected Tags
+              Write tags to add below
             </label>
 
-            <div className="min-h-[56px] w-full border border-gray-300 p-3 flex flex-wrap gap-2 bg-white">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagKeyDown}
+              placeholder="Type tag and press Enter"
+              className="w-full border border-gray-300 p-3 focus:ring-2 focus:ring-black"
+            />
+            {/* Selected Tags Chips */}
+            <div className="mt-3 min-h-[48px] w-full border border-gray-300 p-2 flex flex-wrap gap-2 bg-white">
               {selectedTags.length === 0 ? (
                 <span className="text-gray-400 text-sm">No tags selected</span>
               ) : (
@@ -245,16 +322,17 @@ export default function Products() {
                   .map((tag) => (
                     <span
                       key={tag._id}
-                      className="flex items-center gap-2 bg-black text-white px-3 py-1 text-sm"
+                      className="flex items-center gap-2 bg-black text-white px-3 py-1 text-sm rounded"
                     >
                       {tag.name}
                       <button
+                        type="button"
                         onClick={() =>
                           setSelectedTags((prev) =>
                             prev.filter((id) => id !== tag._id),
                           )
                         }
-                        className="text-xs"
+                        className="text-xs hover:text-red-400"
                       >
                         ✕
                       </button>
@@ -264,17 +342,72 @@ export default function Products() {
             </div>
           </div>
 
-          {/* Product Image */}
+          {/* =================================Product Images============================== */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Product Image {editingProductId && "(optional)"}
+              Product Images {editingProductId && "(optional)"}
             </label>
+
+            {/* File input */}
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setProductImage(e.target.files[0])}
+              multiple
+              onChange={(e) =>
+                setProductImage((prev) => [
+                  ...prev,
+                  ...Array.from(e.target.files),
+                ])
+              }
               className="w-full border border-gray-300 p-3 bg-white"
             />
+
+            {/* EXISTING IMAGES (FROM DB) – shown only in Edit mode */}
+            {editingProductId && (
+              <div className="mt-3">
+                <p className="text-xs text-gray-500 mb-2">Existing images</p>
+                <div className="flex flex-wrap gap-3">
+                  {products
+                    .find((p) => p._id === editingProductId)
+                    ?.productImages?.map((img, index) => (
+                      <img
+                        key={index}
+                        src={img.url}
+                        alt="Existing product"
+                        className="w-24 h-24 object-cover rounded-lg border"
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* NEW IMAGES PREVIEW (FILES SELECTED NOW) */}
+            {Array.isArray(productImage) && productImage.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs text-gray-500 mb-2">New images</p>
+                <div className="flex flex-wrap gap-3">
+                  {productImage.map((file, index) => (
+                    <div key={index} className="relative w-24 h-24">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        className="w-full h-full object-cover rounded-lg border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProductImage((prev) =>
+                            prev.filter((_, i) => i !== index),
+                          )
+                        }
+                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}
@@ -288,32 +421,25 @@ export default function Products() {
           </div>
         </div>
 
-        {/* ===== NEW CODE (Cancel Edit) ===== */}
+        {/* ======================= Cancel Edit ======================= */}
         {editingProductId && (
           <button
-            onClick={() => {
-              setEditingProductId(null);
-              setProductName("");
-              setProductDescription("");
-              setProductPrize("");
-              setProductImage("");
-            }}
+            onClick={handleCancelEdit}
             className="mt-2 text-sm text-red-600 underline"
           >
             Cancel Edit
           </button>
         )}
-        {/* ===== END NEW CODE ===== */}
       </div>
 
       {/* ================= Tags & Flags ================= */}
-      <div className="bg-[#fdebe] rounded-2xl p-6">
+      {/* <div className="bg-[#fdebe] rounded-2xl p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           Select Tags for the product while adding
-        </h2>
+        </h2> */}
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-3">
+      {/* Tags */}
+      {/* <div className="flex flex-wrap gap-3">
           {tagsLoading ? (
             <span className="text-sm text-gray-500">Loading tags...</span>
           ) : (
@@ -342,10 +468,10 @@ export default function Products() {
               );
             })
           )}
-        </div>
+        </div> */}
 
-        {/* Flags (static UI only for now) */}
-        <div className="flex flex-wrap gap-4 mt-6">
+      {/* Flags (static UI only for now) */}
+      {/* <div className="flex flex-wrap gap-4 mt-6">
           {[].map((flag) => (
             <label
               key={flag}
@@ -356,6 +482,16 @@ export default function Products() {
             </label>
           ))}
         </div>
+      </div>  */}
+
+      <div className="flex justify-center mb-6">
+        <input
+          type="text"
+          placeholder="Search by name, description, or tag..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-md px-4 py-2 border border-gray-300 shadow-sm rounded-full focus:outline-none focus:ring-2 focus:ring-black text-black "
+        />
       </div>
 
       {/* ================= All Products ================= */}
@@ -371,17 +507,37 @@ export default function Products() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <div
               key={product._id}
               className="group bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
             >
-              <div className="relative h-56 overflow-hidden">
-                <img
-                  src={product.productImage.url}
-                  alt={product.productName}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
+              {/* Product Images Slider */}
+              <div className="relative h-56 overflow-hidden rounded-t-2xl">
+                <Swiper
+                  modules={[Autoplay, Pagination]}
+                  autoplay={{
+                    delay: 3000,
+                    pauseOnMouseEnter: true,
+                    disableOnInteraction: false,
+                  }}
+                  pagination={{
+                
+                    clickable: true,
+                  }}
+                  loop={true}
+                  className="h-full"
+                >
+                  {product.productImages?.map((img, index) => (
+                    <SwiperSlide key={index}>
+                      <img
+                        src={img.url}
+                        alt={product.productName}
+                        className="w-full h-full object-cover"
+                      />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
               </div>
 
               <div className="p-5 space-y-3">
@@ -405,7 +561,7 @@ export default function Products() {
                         setProductName(product.productName);
                         setProductDescription(product.productDescription);
                         setProductPrize(product.productPrize);
-                        setProductImage(null);
+                        setProductImage([]);
                         setSelectedTags(product.tags || []);
                         // window.scrollTo({ top: 0, behavior: "smooth" });
                         document.getElementById("edit-form").scrollIntoView({
