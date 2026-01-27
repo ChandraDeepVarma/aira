@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import ProductSkeleton from "@/components/productskeleton";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
+import { useRouter } from "next/navigation";
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -13,6 +14,8 @@ export default function Products() {
   const [loading, setLoading] = useState(false);
   const [productAdded, setProductAdded] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const router = useRouter();
 
   /* ================= FETCH PRODUCTS ================= */
 
@@ -56,17 +59,12 @@ export default function Products() {
                 tag &&
                 typeof tag === "object" &&
                 typeof tag.name === "string" &&
-                tag.name
-                  .toLowerCase()
-                  .replace(/\s+/g, "")
-                  .includes(search),
+                tag.name.toLowerCase().replace(/\s+/g, "").includes(search),
             )
           : false;
 
         return (
-          name.includes(search) ||
-          description.includes(search) ||
-          tagsMatch
+          name.includes(search) || description.includes(search) || tagsMatch
         );
       })
     : [];
@@ -103,6 +101,7 @@ export default function Products() {
           {filteredProducts.map((product) => (
             <div
               key={product._id}
+              onClick={() => router.push(`/products/${product._id}`)}
               className="group bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
             >
               {/* IMAGE SLIDER */}
