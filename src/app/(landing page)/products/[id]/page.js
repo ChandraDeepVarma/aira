@@ -1,3 +1,61 @@
+// import connectDB from "@/lib/mongodb";
+// import Product from "@/models/products";
+// import ProductImageGallery from "@/components/products/ProductImageGallery";
+// import { notFound } from "next/navigation";
+// import mongoose from "mongoose";
+
+// async function getProduct(id) {
+//   if (!mongoose.Types.ObjectId.isValid(id)) {
+//     notFound();
+//   }
+
+//   await connectDB();
+
+//   const product = await Product.findById(id).select(
+//     "productName productPrize productDescription productImages",
+//   );
+
+//   // 2️⃣ Product does not exist
+//   if (!product) {
+//     notFound();
+//   }
+
+//   return product;
+// }
+
+// export default async function ProductDetailPage({ params }) {
+//   const { id } = await params;
+
+//   const product = await getProduct(id);
+
+//   return (
+//     <div className="bg-white">
+//       <div className="max-w-7xl mx-auto px-6 pt-28 pb-16 grid grid-cols-1 md:grid-cols-2 gap-12">
+//         {/* IMAGE GALLERY */}
+//         <ProductImageGallery images={product.productImages} />
+
+//         {/* PRODUCT INFO */}
+//         <div className="space-y-4 text-black">
+//           <h1 className="text-2xl font-semibold leading-snug">
+//             {product.productName}
+//           </h1>
+
+//           <div className="flex items-end gap-2">
+//             <span className="text-sm text-gray-500">Price:</span>
+//             <span className="text-3xl font-semibold text-red-600">
+//               ₹{product.productPrize}
+//             </span>
+//           </div>
+
+//           <p className="text-sm text-gray-700 leading-relaxed">
+//             {product.productDescription}
+//           </p>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
 import { headers } from "next/headers";
 import ProductImageGallery from "@/components/products/ProductImageGallery";
 

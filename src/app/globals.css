@@ -36,3 +36,28 @@ body {
   background-color: #000000; /* active dot */
   opacity: 1;
 }
+
+/* react-inner-image-zoom minimal required styles */
+.iiz {
+  position: relative;
+  display: inline-block;
+}
+
+.iiz__img {
+  display: block;
+  max-width: 100%;
+}
+
+.iiz__zoom-img {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  z-index: 20;
+  max-width: none;
+  background: white;
+  border: 1px solid #e5e7eb; /* tailwind gray-300 */
+}
+
+.iiz__zoom-img--hidden {
+  display: none;
+}
